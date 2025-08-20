@@ -1,4 +1,5 @@
-﻿using OrderProcessing.Api.Dtos;
+﻿using Microsoft.AspNetCore.Mvc;
+using OrderProcessing.Api.Dtos;
 using OrderProcessing.Api.Mappers;
 using OrderProcessing.Core.DTOs;
 using OrderProcessing.Core.Interfaces;
@@ -164,6 +165,27 @@ public static class OrderEndpointsBuilder
         .Produces<IEnumerable<OrderResponse>>(200)
         .Produces(400);
 
+        // Get Next page of orders
+        endpoints.MapGet("/page/{page:int}", async (int page, IOrderService orderService, ILogger<Program> logger, [FromQuery] int pageSize = 10) =>
+        {
+            try
+            {
+                var allOrders = await orderService.GetOrdersNextPageAsync(page,pageSize);
+                var orderMapper = endpoints.ServiceProvider.GetRequiredService<OrderMapper>();
+                var responses = allOrders.Select(orderMapper.MapToResponse);
+
+                return Results.Ok(responses);
+            }
+            catch (Exception ex)
+            {
+                logger.LogError(ex, "Failed to retrieve next page of orders");
+                return Results.BadRequest(new { error = ex.Message });
+            }
+        })
+        .WithName("GetOrdersNextPageAsync")
+        .WithSummary("Get next page of orders")
+        .Produces<IEnumerable<OrderResponse>>(200)
+        .Produces(400);
         return endpoints;
     }
 }
