@@ -8,7 +8,9 @@ using OrderProcessing.Core.Models;
 using OrderProcessing.Infrastructure.Data;
 using OrderProcessing.Infrastructure.Repositories;
 using OrderProcessing.Services;
+using OrderProcessing.Services.Configuration;
 using OrderProcessing.Services.External;
+using OrderProcessing.Services.Resilience;
 using Serilog;
 
 var builder = WebApplication.CreateBuilder(args);
@@ -25,6 +27,10 @@ builder.Host.UseSerilog();
 builder.Services.AddEndpointsApiExplorer();
 builder.Services.AddSwaggerGen();
 
+// Configure options
+builder.Services.Configure<ResilienceOptions>(builder.Configuration.GetSection(ResilienceOptions.SectionName));
+builder.Services.Configure<ExternalServiceOptions>(builder.Configuration.GetSection(ExternalServiceOptions.SectionName));
+
 // Add Entity Framework with In-Memory database for demo
 builder.Services.AddDbContext<OrderContext>(options =>
     options.UseInMemoryDatabase("OrderProcessingDemo"));
@@ -34,17 +40,52 @@ builder.Services.AddScoped<IOrderRepository, OrderRepository>();
 builder.Services.AddScoped<IOrderService, OrderService>();
 builder.Services.AddSingleton<OrderMapper>();
 
-// Add external service implementations (these will be mock services for now)
-builder.Services.AddScoped<IInventoryService, MockInventoryService>();
-builder.Services.AddScoped<IPaymentService, MockPaymentService>();
-builder.Services.AddScoped<IShippingService, MockShippingService>();
+//// Add external service implementations (these will be mock services for now)
+//builder.Services.AddScoped<IInventoryService, MockInventoryService>();
+//builder.Services.AddScoped<IPaymentService, MockPaymentService>();
+//builder.Services.AddScoped<IShippingService, MockShippingService>();
+
+// Add resilience services
+builder.Services.AddSingleton<IResiliencePipelineFactory, ResiliencePipelineFactory>();
+builder.Services.AddSingleton<ICircuitBreakerMonitor, CircuitBreakerMonitor>();
+
+// Add mock external services (base implementations)
+builder.Services.AddScoped<MockInventoryService>();
+builder.Services.AddScoped<MockPaymentService>();
+builder.Services.AddScoped<MockShippingService>();
+
+// Add resilient decorators for external services
+builder.Services.AddScoped<IInventoryService>(provider =>
+{
+    var mockService = provider.GetRequiredService<MockInventoryService>();
+    var pipelineFactory = provider.GetRequiredService<IResiliencePipelineFactory>();
+    var logger = provider.GetRequiredService<ILogger<ResilientInventoryService>>();
+    return new ResilientInventoryService(mockService, pipelineFactory, logger);
+});
+
+builder.Services.AddScoped<IPaymentService>(provider =>
+{
+    var mockService = provider.GetRequiredService<MockPaymentService>();
+    var pipelineFactory = provider.GetRequiredService<IResiliencePipelineFactory>();
+    var logger = provider.GetRequiredService<ILogger<ResilientPaymentService>>();
+    return new ResilientPaymentService(mockService, pipelineFactory, logger);
+});
+
+builder.Services.AddScoped<IShippingService>(provider =>
+{
+    var mockService = provider.GetRequiredService<MockShippingService>();
+    var pipelineFactory = provider.GetRequiredService<IResiliencePipelineFactory>();
+    var logger = provider.GetRequiredService<ILogger<ResilientShippingService>>();
+    return new ResilientShippingService(mockService, pipelineFactory, logger);
+});
 
 // Add HTTP clients for external services (will be used later with Polly)
 builder.Services.AddHttpClient();
 
 // Add health checks
 builder.Services.AddHealthChecks()
-    .AddDbContextCheck<OrderContext>();
+    .AddDbContextCheck<OrderContext>()
+    .AddCheck<ResilienceHealthCheck>("resilience");
 
 var app = builder.Build();
 
@@ -62,6 +103,10 @@ app.MapHealthChecks("/health");
 
 // Map minimal API endpoints
 app.MapOrderEndpoints();
+app.MapDemoEndpoints();
+
+// Map resilience monitoring endpoints
+app.MapResilienceMonitoringEndpoints();
 
 // Seed database with sample data
 using (var scope = app.Services.CreateScope())

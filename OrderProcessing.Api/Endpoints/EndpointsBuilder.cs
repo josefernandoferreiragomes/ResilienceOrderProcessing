@@ -186,6 +186,7 @@ public static class OrderEndpointsBuilder
         .WithSummary("Get next page of orders")
         .Produces<IEnumerable<OrderResponse>>(200)
         .Produces(400);
+
         return endpoints;
     }
 }
