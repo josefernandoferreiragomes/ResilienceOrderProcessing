@@ -22,6 +22,7 @@
     <ProjectReference Include="..\OrderProcessing.Core\OrderProcessing.Core.csproj" />
     <ProjectReference Include="..\OrderProcessing.Infrastructure\OrderProcessing.Infrastructure.csproj" />
     <ProjectReference Include="..\OrderProcessing.Services\OrderProcessing.Services.csproj" />
+    <ProjectReference Include="..\ResilienceOrderProcessing.ServiceDefaults\ResilienceOrderProcessing.ServiceDefaults.csproj" />
   </ItemGroup>
 
 </Project>

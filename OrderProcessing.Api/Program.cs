@@ -15,6 +15,8 @@ using Serilog;
 
 var builder = WebApplication.CreateBuilder(args);
 
+builder.AddServiceDefaults();
+
 // Configure Serilog
 Log.Logger = new LoggerConfiguration()
     .WriteTo.Console()
@@ -50,14 +52,17 @@ builder.Services.AddSingleton<IResiliencePipelineFactory, ResiliencePipelineFact
 builder.Services.AddSingleton<ICircuitBreakerMonitor, CircuitBreakerMonitor>();
 
 // Add mock external services (base implementations)
-builder.Services.AddScoped<MockInventoryService>();
+builder.Services.AddScoped<HttpInventoryService>();
 builder.Services.AddScoped<MockPaymentService>();
 builder.Services.AddScoped<MockShippingService>();
 
 // Add resilient decorators for external services
+//missing adaptation to HttpInventoryService instead of MockInventoryService
+//builder.Services.AddScoped<IInventoryService, HttpInventoryService>();
+
 builder.Services.AddScoped<IInventoryService>(provider =>
 {
-    var mockService = provider.GetRequiredService<MockInventoryService>();
+    var mockService = provider.GetRequiredService<HttpInventoryService>();
     var pipelineFactory = provider.GetRequiredService<IResiliencePipelineFactory>();
     var logger = provider.GetRequiredService<ILogger<ResilientInventoryService>>();
     return new ResilientInventoryService(mockService, pipelineFactory, logger);
@@ -81,6 +86,10 @@ builder.Services.AddScoped<IShippingService>(provider =>
 
 // Add HTTP clients for external services (will be used later with Polly)
 builder.Services.AddHttpClient();
+builder.Services.AddHttpClient("InventoryService", client =>
+{
+    client.BaseAddress = new Uri("https://localhost:7261"); // Update port as needed
+});
 
 // Add health checks
 builder.Services.AddHealthChecks()
@@ -88,6 +97,23 @@ builder.Services.AddHealthChecks()
     .AddCheck<ResilienceHealthCheck>("resilience");
 
 var app = builder.Build();
+
+// Map minimal API endpoints
+var demo = app.MapGroup("/api/demo")
+    .WithOpenApi()
+    .WithTags("Demo");
+demo.MapDemoEndpoints();
+
+// Map resilience monitoring endpoints
+var resilience = app.MapGroup("/api/resilience")
+    .WithOpenApi()
+    .WithTags("Demo");
+resilience.MapResilienceMonitoringEndpoints();
+
+var orders = app.MapGroup("/api/orders")
+    .WithOpenApi()
+    .WithTags("Orders");
+app.MapOrderEndpoints();
 
 // Configure the HTTP request pipeline
 if (app.Environment.IsDevelopment())
@@ -100,13 +126,6 @@ app.UseHttpsRedirection();
 
 // Add health check endpoint
 app.MapHealthChecks("/health");
-
-// Map minimal API endpoints
-app.MapOrderEndpoints();
-app.MapDemoEndpoints();
-
-// Map resilience monitoring endpoints
-app.MapResilienceMonitoringEndpoints();
 
 // Seed database with sample data
 using (var scope = app.Services.CreateScope())

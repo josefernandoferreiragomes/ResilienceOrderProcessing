@@ -1,93 +1,93 @@
-﻿using Microsoft.Extensions.Logging;
-using OrderProcessing.Core.ExternalServices;
-using OrderProcessing.Core.ExternalServices.Models;
-using OrderProcessing.Core.Interfaces;
-using OrderProcessing.Core.Models;
+﻿//using Microsoft.Extensions.Logging;
+//using OrderProcessing.Core.ExternalServices;
+//using OrderProcessing.Core.ExternalServices.Models;
+//using OrderProcessing.Core.Interfaces;
+//using OrderProcessing.Core.Models;
 
-namespace OrderProcessing.Services.External;
+//namespace OrderProcessing.Services.External;
 
-public class MockInventoryService : IInventoryService
-{
-    private readonly ILogger<MockInventoryService> _logger;
-    private readonly Random _random = new();
+//public class MockInventoryService : IInventoryService
+//{
+//    private readonly ILogger<MockInventoryService> _logger;
+//    private readonly Random _random = new();
 
-    // Simulated inventory data
-    private readonly Dictionary<string, int> _inventory = new()
-    {
-        { "LAPTOP-001", 10 },
-        { "MOUSE-001", 50 },
-        { "KEYBOARD-001", 25 },
-        { "MONITOR-001", 5 },
-        { "HEADSET-001", 15 }
-    };
+//    // Simulated inventory data
+//    private readonly Dictionary<string, int> _inventory = new()
+//    {
+//        { "LAPTOP-001", 10 },
+//        { "MOUSE-001", 50 },
+//        { "KEYBOARD-001", 25 },
+//        { "MONITOR-001", 5 },
+//        { "HEADSET-001", 15 }
+//    };
 
-    public MockInventoryService(ILogger<MockInventoryService> logger)
-    {
-        _logger = logger;
-    }
+//    public MockInventoryService(ILogger<MockInventoryService> logger)
+//    {
+//        _logger = logger;
+//    }
 
-    public async Task<bool> CheckAvailabilityAsync(string productId, int quantity)
-    {
-        _logger.LogInformation("Checking inventory for product {ProductId}, quantity {Quantity}", productId, quantity);
+//    public async Task<bool> CheckAvailabilityAsync(string productId, int quantity)
+//    {
+//        _logger.LogInformation("Checking inventory for product {ProductId}, quantity {Quantity}", productId, quantity);
 
-        // Simulate network delay
-        await Task.Delay(_random.Next(100, 500));
+//        // Simulate network delay
+//        await Task.Delay(_random.Next(100, 500));
 
-        // Simulate occasional failures (10% chance)
-        if (_random.Next(1, 101) <= 10)
-        {
-            _logger.LogWarning("Inventory service temporarily unavailable for product {ProductId}", productId);
-            throw new InvalidOperationException("Inventory service temporarily unavailable");
-        }
+//        // Simulate occasional failures (10% chance)
+//        if (_random.Next(1, 101) <= 10)
+//        {
+//            _logger.LogWarning("Inventory service temporarily unavailable for product {ProductId}", productId);
+//            throw new InvalidOperationException("Inventory service temporarily unavailable");
+//        }
 
-        var available = _inventory.GetValueOrDefault(productId, 0) >= quantity;
-        _logger.LogInformation("Product {ProductId} availability check: {Available}", productId, available);
+//        var available = _inventory.GetValueOrDefault(productId, 0) >= quantity;
+//        _logger.LogInformation("Product {ProductId} availability check: {Available}", productId, available);
 
-        return available;
-    }
+//        return available;
+//    }
 
-    public async Task<bool> ReserveInventoryAsync(string productId, int quantity)
-    {
-        _logger.LogInformation("Reserving inventory for product {ProductId}, quantity {Quantity}", productId, quantity);
+//    public async Task<bool> ReserveInventoryAsync(string productId, int quantity)
+//    {
+//        _logger.LogInformation("Reserving inventory for product {ProductId}, quantity {Quantity}", productId, quantity);
 
-        // Simulate network delay
-        await Task.Delay(_random.Next(200, 800));
+//        // Simulate network delay
+//        await Task.Delay(_random.Next(200, 800));
 
-        // Simulate occasional failures (5% chance)
-        if (_random.Next(1, 101) <= 5)
-        {
-            _logger.LogWarning("Failed to reserve inventory for product {ProductId}", productId);
-            throw new InvalidOperationException("Failed to reserve inventory");
-        }
+//        // Simulate occasional failures (5% chance)
+//        if (_random.Next(1, 101) <= 5)
+//        {
+//            _logger.LogWarning("Failed to reserve inventory for product {ProductId}", productId);
+//            throw new InvalidOperationException("Failed to reserve inventory");
+//        }
 
-        if (_inventory.ContainsKey(productId) && _inventory[productId] >= quantity)
-        {
-            _inventory[productId] -= quantity;
-            _logger.LogInformation("Successfully reserved {Quantity} units of product {ProductId}", quantity, productId);
-            return true;
-        }
+//        if (_inventory.ContainsKey(productId) && _inventory[productId] >= quantity)
+//        {
+//            _inventory[productId] -= quantity;
+//            _logger.LogInformation("Successfully reserved {Quantity} units of product {ProductId}", quantity, productId);
+//            return true;
+//        }
 
-        _logger.LogWarning("Insufficient inventory for product {ProductId}", productId);
-        return false;
-    }
+//        _logger.LogWarning("Insufficient inventory for product {ProductId}", productId);
+//        return false;
+//    }
 
-    public async Task<bool> ReleaseInventoryAsync(string productId, int quantity)
-    {
-        _logger.LogInformation("Releasing inventory for product {ProductId}, quantity {Quantity}", productId, quantity);
+//    public async Task<bool> ReleaseInventoryAsync(string productId, int quantity)
+//    {
+//        _logger.LogInformation("Releasing inventory for product {ProductId}, quantity {Quantity}", productId, quantity);
 
-        // Simulate network delay
-        await Task.Delay(_random.Next(100, 300));
+//        // Simulate network delay
+//        await Task.Delay(_random.Next(100, 300));
 
-        if (_inventory.ContainsKey(productId))
-        {
-            _inventory[productId] += quantity;
-        }
-        else
-        {
-            _inventory[productId] = quantity;
-        }
+//        if (_inventory.ContainsKey(productId))
+//        {
+//            _inventory[productId] += quantity;
+//        }
+//        else
+//        {
+//            _inventory[productId] = quantity;
+//        }
 
-        _logger.LogInformation("Successfully released {Quantity} units of product {ProductId}", quantity, productId);
-        return true;
-    }
-}
+//        _logger.LogInformation("Successfully released {Quantity} units of product {ProductId}", quantity, productId);
+//        return true;
+//    }
+//}
