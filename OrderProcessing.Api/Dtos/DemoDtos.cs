@@ -32,6 +32,7 @@ public class SimulateLoadRequest
 public class LoadTestResult
 {
     public int RequestId { get; set; }
+    public Guid OrderId { get; set; }
     public bool Success { get; set; }
     public double ResponseTimeMs { get; set; }
     public string Status { get; set; } = string.Empty;

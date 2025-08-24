@@ -1,7 +1,7 @@
 ﻿using OrderProcessing.Services.Resilience;
 
 namespace OrderProcessing.Api.Endpoints;
-public static class ResilienceEndpoints
+public static class ResilienceEndpointsBuilder
 {
     public static IEndpointRouteBuilder MapResilienceMonitoringEndpoints(this IEndpointRouteBuilder endpoints)
     {

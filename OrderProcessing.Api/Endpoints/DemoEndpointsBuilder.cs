@@ -6,7 +6,7 @@ using OrderProcessing.Services.Resilience;
 
 namespace OrderProcessing.Api.Endpoints;
 
-public static class DemoEndpoints
+public static class DemoEndpointsBuilder
 {
     //public static void MapDemoEndpoints(this WebApplication app)
     //{
@@ -106,7 +106,7 @@ public static class DemoEndpoints
         // Simulate high load to trigger circuit breakers
         demo.MapPost("/simulate-load", async (
             SimulateLoadRequest request,
-            IOrderService orderService,
+            IServiceProvider serviceProvider, // <-- Add this parameter
             ILogger<Program> logger) =>
         {
             var tasks = new List<Task<LoadTestResult>>();
@@ -114,7 +114,13 @@ public static class DemoEndpoints
             // Create concurrent tasks
             for (int i = 0; i < request.ConcurrentRequests; i++)
             {
-                tasks.Add(SimulateOrderProcessing(i, orderService, logger));
+                tasks.Add(Task.Run(async () =>
+                {
+                    using var scope = serviceProvider.CreateScope();
+                    var scopedOrderService = scope.ServiceProvider.GetRequiredService<IOrderService>();
+                    var scopedLogger = scope.ServiceProvider.GetRequiredService<ILogger<Program>>();
+                    return await SimulateOrderProcessing(i, scopedOrderService, scopedLogger);
+                }));
             }
 
             var results = await Task.WhenAll(tasks);
@@ -159,7 +165,6 @@ public static class DemoEndpoints
     private static async Task<LoadTestResult> SimulateOrderProcessing(int requestId, IOrderService orderService, ILogger<Program> logger)
     {
         var startTime = DateTime.UtcNow;
-
         try
         {
             var orderRequest = new CreateOrderRequest
@@ -187,6 +192,7 @@ public static class DemoEndpoints
             return new LoadTestResult
             {
                 RequestId = requestId,
+                OrderId = processedOrder.Id,
                 Success = processedOrder.Status != Core.Models.OrderStatus.Failed,
                 ResponseTimeMs = (endTime - startTime).TotalMilliseconds,
                 Status = processedOrder.Status.ToString(),
@@ -201,6 +207,7 @@ public static class DemoEndpoints
             return new LoadTestResult
             {
                 RequestId = requestId,
+                OrderId = Guid.Empty,
                 Success = false,
                 ResponseTimeMs = (endTime - startTime).TotalMilliseconds,
                 Status = "Exception",
