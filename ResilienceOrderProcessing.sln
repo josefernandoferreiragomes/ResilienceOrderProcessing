@@ -34,6 +34,8 @@ Project("{FAE04EC0-301F-11D3-BF4B-00C04F79EFBC}") = "ResilienceOrderProcessing.A
 EndProject
 Project("{FAE04EC0-301F-11D3-BF4B-00C04F79EFBC}") = "ResilienceOrderProcessing.ServiceDefaults", "ResilienceOrderProcessing.ServiceDefaults\ResilienceOrderProcessing.ServiceDefaults.csproj", "{768CED68-19D4-51AF-E192-48E26E8C68FE}"
 EndProject
+Project("{FAE04EC0-301F-11D3-BF4B-00C04F79EFBC}") = "LoggingApi", "LoggingApi\LoggingApi.csproj", "{6398A249-7381-A3BC-C984-0137E677E1CA}"
+EndProject
 Global
 	GlobalSection(SolutionConfigurationPlatforms) = preSolution
 		Debug|Any CPU = Debug|Any CPU
@@ -84,6 +86,10 @@ Global
 		{768CED68-19D4-51AF-E192-48E26E8C68FE}.Debug|Any CPU.Build.0 = Debug|Any CPU
 		{768CED68-19D4-51AF-E192-48E26E8C68FE}.Release|Any CPU.ActiveCfg = Release|Any CPU
 		{768CED68-19D4-51AF-E192-48E26E8C68FE}.Release|Any CPU.Build.0 = Release|Any CPU
+		{6398A249-7381-A3BC-C984-0137E677E1CA}.Debug|Any CPU.ActiveCfg = Debug|Any CPU
+		{6398A249-7381-A3BC-C984-0137E677E1CA}.Debug|Any CPU.Build.0 = Debug|Any CPU
+		{6398A249-7381-A3BC-C984-0137E677E1CA}.Release|Any CPU.ActiveCfg = Release|Any CPU
+		{6398A249-7381-A3BC-C984-0137E677E1CA}.Release|Any CPU.Build.0 = Release|Any CPU
 	EndGlobalSection
 	GlobalSection(SolutionProperties) = preSolution
 		HideSolutionNode = FALSE
@@ -93,6 +99,7 @@ Global
 		{3DD98FAC-E189-D3E1-C651-19F026A9BF32} = {02EA681E-C7D8-13C7-8484-4AC65E1B71E8}
 		{7B65771F-02DE-ADA2-13C5-4062C125319E} = {02EA681E-C7D8-13C7-8484-4AC65E1B71E8}
 		{74D9064A-EB73-6A25-46E8-698B3965E346} = {278DEE7A-5188-49B7-9B0C-EBDC65553441}
+		{6398A249-7381-A3BC-C984-0137E677E1CA} = {278DEE7A-5188-49B7-9B0C-EBDC65553441}
 	EndGlobalSection
 	GlobalSection(ExtensibilityGlobals) = postSolution
 		SolutionGuid = {62E39433-8BD5-4E57-88FC-4658FF1ECB51}

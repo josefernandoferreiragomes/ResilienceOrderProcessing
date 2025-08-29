@@ -10,7 +10,7 @@ public static class WebApplicationExtensions
     public static void ConfigureAppPipeline(this WebApplication app)
     {
 
-        // Map minimal API endpoints
+        // Map demo endpoints
         var demo = app.MapGroup("/api/demo")
             .WithOpenApi()
             .WithTags("Demo");
@@ -22,10 +22,11 @@ public static class WebApplicationExtensions
             .WithTags("Resilience");
         resilience.MapResilienceMonitoringEndpoints();
 
+        //Map order endpoints
         var orders = app.MapGroup("/api/orders")
             .WithOpenApi()
             .WithTags("Orders");
-        app.MapOrderEndpoints();
+        orders.MapOrderEndpoints();
 
         // Configure the HTTP request pipeline
         if (app.Environment.IsDevelopment())

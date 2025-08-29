@@ -1,0 +1,107 @@
+﻿# OrderProcessing.Api/test-endpoints.http
+# Testing file for the Minimal API endpoints with SignalR logging
+
+### Variables
+@hostname = localhost
+@port = 7103
+@baseUrl = https://{{hostname}}:{{port}}
+
+### Health Check
+GET {{baseUrl}}/health
+Accept: application/json
+
+###
+
+### Get Feature Status
+GET {{baseUrl}}/api/features
+Accept: application/json
+
+###
+
+### Create Order - Valid Request
+POST {{baseUrl}}/api/orders
+Content-Type: application/json
+
+{
+    "customerId": "customer-12345",
+    "productId": "product-67890",
+    "quantity": 2,
+    "price": 29.99,
+    "notes": "Priority shipping requested"
+}
+
+###
+
+### Create Order - Invalid Request (Missing CustomerId)
+POST {{baseUrl}}/api/orders
+Content-Type: application/json
+
+{
+    "customerId": "",
+    "productId": "product-67890",
+    "quantity": 2,
+    "price": 29.99
+}
+
+###
+
+### Create Order - Invalid Request (Zero Quantity)
+POST {{baseUrl}}/api/orders
+Content-Type: application/json
+
+{
+    "customerId": "customer-12345",
+    "productId": "product-67890",
+    "quantity": 0,
+    "price": 29.99
+}
+
+###
+
+### Get Order
+GET {{baseUrl}}/api/orders/12345-67890-abc-def
+Accept: application/json
+
+###
+
+### Cancel Order (May randomly fail for demonstration)
+POST {{baseUrl}}/api/orders/12345-67890-abc-def/cancel
+Content-Type: application/json
+
+###
+
+### Swagger Documentation
+GET {{baseUrl}}/swagger/index.html
+
+###
+
+# Performance Testing - Multiple rapid requests
+### Rapid Order Creation (Run multiple times)
+POST {{baseUrl}}/api/orders
+Content-Type: application/json
+
+{
+    "customerId": "load-test-customer",
+    "productId": "load-test-product",
+    "quantity": 1,
+    "price": 19.99
+}
+
+###
+
+### Bulk Order Retrieval Test
+GET {{baseUrl}}/api/orders/order-1
+
+###
+GET {{baseUrl}}/api/orders/order-2
+
+###
+GET {{baseUrl}}/api/orders/order-3
+
+###
+
+# Error Testing
+### Force Server Error (Invalid Order ID format)
+GET {{baseUrl}}/api/orders/invalid-order-format-that-might-cause-issues
+
+###

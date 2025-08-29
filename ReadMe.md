@@ -1,224 +1,244 @@
-# Order Processing API with Polly Resilience Patterns
+# Resilient Order Processing API with SignalR Logging
 
-This demo showcases a .NET 8 Order Processing API that implements Polly resilience patterns including retry, circuit breaker, timeout, and monitoring capabilities.
+A minimal API implementation showcasing resilience patterns with Polly, real-time logging via SignalR, and feature toggles.
 
 ## 🏗️ Architecture
 
 ```
-┌─────────────────┐    ┌──────────────────┐    ┌─────────────────┐
-│   Minimal API   │    │  Order Service   │    │ External APIs   │
-│   Controllers   │ -> │  (Business       │ -> │ (Inventory,     │
-│                 │    │   Logic)         │    │  Payment,       │
-│                 │    │                  │    │  Shipping)      │
-└─────────────────┘    └──────────────────┘    └─────────────────┘
-                                │
-                                ▼
-                       ┌──────────────────┐
-                       │ Resilient Wrappers│
-                       │ - Retry           │
-                       │ - Circuit Breaker │
-                       │ - Timeout         │
-                       │ - Fallback        │
-                       └──────────────────┘
+┌─────────────────┐    HTTP/SignalR    ┌──────────────────┐
+│ OrderProcessing │ ────────────────── │   LoggingApi     │
+│      API        │                    │                  │
+│  (Minimal API)  │                    │ (SignalR Hubs)   │
+└─────────────────┘                    └──────────────────┘
+         │                                       │
+         │                              ┌──────────────────┐
+         └──────────────────────────────│ Real-time        │
+                                        │ Dashboard        │
+                                        │ (SignalR Client) │
+                                        └──────────────────┘
 ```
 
-## 🚀 Getting Started
+## 🚀 Features
+
+### OrderProcessing.Api (Minimal API)
+- ✅ **Minimal API endpoints** with comprehensive OpenAPI documentation
+- ✅ **Polly resilience patterns** (Retry + Circuit Breaker) for external calls
+- ✅ **Real-time logging** via SignalR integration
+- ✅ **Performance monitoring** with automatic operation timing
+- ✅ **Request correlation** with unique request IDs
+- ✅ **Feature toggle integration** for dynamic configuration
+- ✅ **Comprehensive error handling** with proper HTTP status codes
+- ✅ **Swagger UI** at root path for easy testing
+
+### LoggingApi
+- ✅ **SignalR Hubs** for real-time log broadcasting
+- ✅ **Feature toggle management** with REST endpoints
+- ✅ **Multiple log categories** (General, Error, Performance, Detailed)
+- ✅ **Dynamic configuration** without API restart
+
+### Real-time Dashboard
+- ✅ **Live log streaming** with color-coded severity levels
+- ✅ **Feature toggle controls** with instant updates
+- ✅ **Performance statistics** and request metrics
+- ✅ **Modern glassmorphism UI** with responsive design
+
+## 📋 API Endpoints
+
+### OrderProcessing.Api
+
+| Method | Endpoint | Description |
+|--------|----------|-------------|
+| `GET` | `/` | Swagger UI (root path) |
+| `GET` | `/health` | Health check endpoint |
+| `GET` | `/api/features` | Get feature toggle status |
+| `POST` | `/api/orders` | Create a new order |
+| `GET` | `/api/orders/{orderId}` | Get order by ID |
+| `POST` | `/api/orders/{orderId}/cancel` | Cancel an order |
+
+### LoggingApi
+
+| Method | Endpoint | Description |
+|--------|----------|-------------|
+| `POST` | `/api/logging/log` | Send log message |
+| `POST` | `/api/logging/performance` | Send performance log |
+| `GET` | `/api/featuretoggle` | Get all feature toggles |
+| `GET` | `/api/featuretoggle/{name}` | Get specific feature status |
+| `POST` | `/api/featuretoggle/{name}/toggle` | Toggle feature state |
+| `GET` | `/loggingHub` | SignalR hub endpoint |
+
+## 🛠️ Setup Instructions
 
 ### Prerequisites
-- .NET 8 SDK
+- .NET 8.0 SDK
 - Visual Studio 2022 or VS Code
 
-### Run the Application
-
+### 1. Clone and Setup
 ```bash
-dotnet run --project OrderProcessing.Api
+git clone https://github.com/josefernandoferreiragomes/ResilienceOrderProcessing.git
+cd ResilienceOrderProcessing
 ```
 
-Navigate to: `https://localhost:5001/swagger`
+### 2. Add the New Files
+Create the following directory structure:
+```
+OrderProcessing.Api/
+├── Services/
+│   ├── ISignalRLoggingService.cs
+│   └── SignalRLoggingService.cs
+├── Middleware/
+│   └── LoggingMiddleware.cs
+├── Models/
+│   └── CreateOrderRequest.cs
+├── Program.cs (replace existing)
+├── appsettings.json (update)
+└── test-endpoints.http (new)
+```
 
-## 🔄 Resilience Patterns Implemented
+### 3. Update Project Files
+Replace your existing `OrderProcessing.Api.csproj` and add the package references shown in the artifacts.
 
-### 1. **Retry Pattern**
-- **Max Retries**: 3 attempts
-- **Backoff**: Exponential with jitter
-- **Base Delay**: 1 second
-- **Max Delay**: 10 seconds
-- **Handles**: HttpRequestException, TaskCanceledException, TimeoutRejectedException
+### 4. Start the Applications
 
-### 2. **Circuit Breaker Pattern**
-- **Failure Threshold**: 3 consecutive failures
-- **Sampling Duration**: 10 seconds
-- **Break Duration**: 30 seconds
-- **Minimum Throughput**: 3 requests
-
-### 3. **Timeout Pattern**
-- **Inventory Service**: 5 seconds
-- **Payment Service**: 10 seconds
-- **Shipping Service**: 8 seconds
-
-### 4. **Fallback Strategies**
-- **Inventory**: Assume common products are available
-- **Payment**: Return failure with user-friendly message
-- **Shipping**: Use default carrier and cost
-
-## 📊 Demo Scenarios
-
-### Basic Order Processing
+#### Terminal 1 - LoggingApi
 ```bash
-POST /api/orders
+cd LoggingApi
+dotnet run
+```
+LoggingApi will start on: `https://localhost:7002`
+
+#### Terminal 2 - OrderProcessing.Api
+```bash
+cd OrderProcessing.Api
+dotnet run
+```
+OrderProcessing.Api will start on: `https://localhost:7103`
+
+### 5. Test the Solution
+
+#### Option 1: Swagger UI
+- Navigate to `https://localhost:7103` (OrderProcessing.Api)
+- Use the interactive Swagger UI to test endpoints
+
+#### Option 2: HTTP File (VS Code)
+- Install "REST Client" extension
+- Open `test-endpoints.http`
+- Click "Send Request" above each endpoint
+
+#### Option 3: Real-time Dashboard
+- Open `dashboard.html` in a browser
+- Click "Connect" to establish SignalR connection
+- Test API endpoints and watch logs stream in real-time
+
+## 🧪 Testing Examples
+
+### Create Order
+```http
+POST https://localhost:7103/api/orders
+Content-Type: application/json
+
 {
-  "customerId": "demo-customer",
-  "items": [
-    {
-      "productId": "LAPTOP-001",
-      "productName": "Gaming Laptop",
-      "quantity": 1,
-      "unitPrice": 1299.99
-    }
-  ],
-  "paymentMethod": { "method": "CreditCard", "token": "demo-token" },
-  "deliveryAddress": {
-    "street": "123 Demo St",
-    "city": "Demo City",
-    "state": "DC",
-    "zipCode": "12345",
-    "country": "USA"
-  }
+    "customerId": "customer-123",
+    "productId": "product-456",
+    "quantity": 2,
+    "price": 29.99,
+    "notes": "Priority shipping"
 }
 ```
 
-### Process Order (Triggers Resilience Patterns)
+### Get Order
+```http
+GET https://localhost:7103/api/orders/some-order-id
+```
+
+### Cancel Order (20% chance of failure for demo)
+```http
+POST https://localhost:7103/api/orders/some-order-id/cancel
+```
+
+### Feature Toggle
+```http
+POST https://localhost:7002/api/featuretoggle/RealTimeLogging/toggle
+Content-Type: application/json
+
+true
+```
+
+## 🔧 Key Implementation Details
+
+### Minimal API Structure
+- **Clean endpoints** using `app.MapGroup()` for organization
+- **Built-in validation** using data annotations
+- **Comprehensive error handling** with `Results.*` patterns
+- **OpenAPI documentation** with detailed summaries and descriptions
+
+### Resilience Patterns
+- **Retry Policy**: 3 attempts with exponential backoff
+- **Circuit Breaker**: Opens after 3 consecutive failures, 30-second break
+- **Timeout Handling**: 30-second HTTP client timeout
+- **Graceful Degradation**: API continues working if logging service is down
+
+### Performance Monitoring
+- **Request timing** for all operations
+- **Performance logs** sent to SignalR
+- **Statistics tracking** in the dashboard
+- **Correlation IDs** for distributed tracing
+
+### Feature Toggles
+- **Real-time configuration** without restarts
+- **Graceful fallbacks** when toggle service is unavailable
+- **Multiple toggle types**: RealTimeLogging, DetailedErrorLogging, PerformanceLogging
+
+## 📊 Monitoring and Observability
+
+### Log Categories
+- **Request**: HTTP request/response logs
+- **Order**: Business logic logs
+- **Validation**: Input validation logs
+- **Performance**: Operation timing logs
+- **Health**: System health logs
+
+### Real-time Dashboard Features
+- **Live log streaming** with different severity colors
+- **Feature toggle controls** for dynamic configuration
+- **Statistics panels** showing request counts, error rates, response times
+- **Log filtering** by category and severity
+- **Auto-scrolling** with log history management
+
+## 🐳 Docker Support
+
+### Build and Run
 ```bash
-POST /api/orders/{orderId}/process
+docker-compose up --build
 ```
 
-## 🧪 Testing Resilience Patterns
+### Services
+- **OrderProcessing.Api**: `http://localhost:7103`
+- **LoggingApi**: `http://localhost:7002`
+- **Nginx Proxy**: `http://localhost` (optional)
 
-### 1. Test Multiple Orders with Resilience
-```bash
-POST /api/demo/test-resilience
-{
-  "numberOfOrders": 20,
-  "delayBetweenRequestsMs": 100
-}
-```
+## 🚨 Error Scenarios
 
-### 2. Simulate High Load (Circuit Breaker)
-```bash
-POST /api/demo/simulate-load
-{
-  "concurrentRequests": 50
-}
-```
+The API includes intentional error scenarios for testing resilience:
 
-### 3. Monitor Circuit Breaker Status
-```bash
-GET /api/monitoring/circuit-breakers
-GET /api/monitoring/resilience-summary
-```
+1. **Invalid Input**: Empty CustomerIds, zero quantities
+2. **Random Failures**: 20% chance of failure in cancel operations
+3. **Network Issues**: Circuit breaker triggers after consecutive failures
+4. **Service Unavailable**: Graceful handling when LoggingApi is down
 
-## 📈 Monitoring Endpoints
+## 🎯 Next Steps
 
-| Endpoint | Description |
-|----------|-------------|
-| `GET /api/monitoring/circuit-breakers` | All circuit breaker statuses |
-| `GET /api/monitoring/circuit-breakers/{service}` | Specific service status |
-| `GET /api/monitoring/resilience-summary` | Overall resilience summary |
-| `GET /health` | Health check including resilience |
+1. **Add Authentication**: JWT tokens with role-based access
+2. **Database Integration**: Entity Framework with SQL Server
+3. **Message Queues**: Azure Service Bus for reliable messaging
+4. **Distributed Tracing**: OpenTelemetry integration
+5. **Health Checks**: Advanced health monitoring with dependencies
+6. **Rate Limiting**: API throttling with Redis
+7. **Caching**: Distributed caching for performance
+8. **Testing**: Unit tests with xUnit and integration tests
 
-## 🎯 Expected Behavior
+## 📚 References
 
-### Normal Operation
-- Orders process successfully
-- Circuit breakers remain closed
-- Minimal retries
-
-### Under Stress
-1. **Transient Failures**: Retry policy kicks in (3 attempts)
-2. **Persistent Failures**: Circuit breaker opens after 3 failures
-3. **Fallback Activation**: Fallback responses when circuit is open
-4. **Recovery**: Circuit breaker closes when service recovers
-
-### Failure Rates in Mock Services
-- **Inventory**: 10% failure rate + 5% timeout
-- **Payment**: 15% failure rate + 10% timeout
-- **Shipping**: 10% failure rate + 5% timeout
-
-## 📝 Sample Test Flow
-
-1. **Start the API**
-2. **Create baseline orders** - Should succeed
-3. **Run resilience test** - Observe retries in logs
-4. **Simulate load** - Watch circuit breakers open
-5. **Monitor status** - Check `/api/monitoring/circuit-breakers`
-6. **Wait for recovery** - Circuit breakers close automatically
-7. **Test again** - Should work normally
-
-## 🔍 Observability
-
-### Logs
-- Structured logging with Serilog
-- Retry attempts logged with reasons
-- Circuit breaker state changes
-- Fallback activations
-
-### Metrics Available
-- Circuit breaker states
-- Retry counts and reasons
-- Timeout occurrences
-- Success/failure rates
-- Response times
-
-## 🚦 Health Checks
-
-The API includes comprehensive health checks:
-- Database connectivity
-- Resilience pattern health
-- Circuit breaker status
-- Service availability
-
-Access at: `GET /health`
-
-## 🔧 Configuration
-
-Resilience patterns are fully configurable via `appsettings.json`:
-
-```json
-{
-  "Resilience": {
-    "RetryPolicy": {
-      "MaxRetries": 3,
-      "BaseDelayMs": 1000,
-      "MaxDelayMs": 10000
-    },
-    "CircuitBreaker": {
-      "FailureThreshold": 3,
-      "SamplingDurationMs": 10000,
-      "BreakDurationMs": 30000
-    }
-  }
-}
-```
-
-## 🎉 Future Extensions
-
-This demo is designed for easy extension with:
-- SignalR for real-time order status updates
-- Feature toggles for logging destinations
-- Custom logging database
-- Additional resilience patterns (bulkhead, rate limiting)
-
-## 🐛 Troubleshooting
-
-- **High failure rates**: Increase retry counts or circuit breaker thresholds
-- **Long timeouts**: Adjust timeout values in configuration
-- **Circuit breakers stuck open**: Check service health and wait for break duration
-- **Performance issues**: Monitor concurrent request limits
-
-## 📚 Key Polly Concepts Demonstrated
-
-1. **Resilience Pipelines**: Combining multiple patterns
-2. **Policy Composition**: Retry + Circuit Breaker + Timeout
-3. **Fallback Strategies**: Graceful degradation
-4. **Monitoring**: Circuit breaker state tracking
-5. **Configuration**: Flexible policy configuration
+- [ASP.NET Core Minimal APIs](https://learn.microsoft.com/en-us/aspnet/core/fundamentals/minimal-apis)
+- [Polly Resilience Patterns](https://www.pollydocs.org/)
+- [SignalR Real-time Communication](https://learn.microsoft.com/en-us/aspnet/core/signalr/introduction)
+- [Feature Management in .NET](https://learn.microsoft.com/en-us/azure/azure-app-configuration/feature-management-dotnet-reference)

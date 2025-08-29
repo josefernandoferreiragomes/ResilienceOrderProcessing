@@ -15,6 +15,7 @@
   </ItemGroup>
 
   <ItemGroup>
+    <ProjectReference Include="..\LoggingApi\LoggingApi.csproj" />
     <ProjectReference Include="..\MockInventoryService.Api\MockInventoryService.Api.csproj" />
     <ProjectReference Include="..\OrderProcessing.Api\OrderProcessing.Api.csproj" />
   </ItemGroup>

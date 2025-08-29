@@ -6,4 +6,6 @@ var orderProcessing = builder.AddProject<Projects.OrderProcessing_Api>("orderpro
 
 orderProcessing.WithReference(mockInventoryService);
 
+builder.AddProject<Projects.LoggingApi>("loggingapi");
+
 builder.Build().Run();

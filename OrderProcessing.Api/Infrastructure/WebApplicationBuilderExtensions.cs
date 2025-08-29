@@ -1,5 +1,7 @@
 ﻿using Microsoft.EntityFrameworkCore;
+using Microsoft.Extensions.FileSystemGlobbing.Internal;
 using OrderProcessing.Api.Mappers;
+using OrderProcessing.Api.Services;
 using OrderProcessing.Core.ExternalServices;
 using OrderProcessing.Core.Interfaces;
 using OrderProcessing.Infrastructure.Data;
@@ -8,6 +10,8 @@ using OrderProcessing.Services;
 using OrderProcessing.Services.Configuration;
 using OrderProcessing.Services.External;
 using OrderProcessing.Services.Resilience;
+using Polly;
+using Polly.Extensions.Http;
 using Serilog;
 
 namespace OrderProcessing.Api.Infrastructure;
@@ -28,7 +32,15 @@ public static class WebApplicationBuilderExtensions
 
         // Add services to the container
         builder.Services.AddEndpointsApiExplorer();
-        builder.Services.AddSwaggerGen();
+        builder.Services.AddSwaggerGen(c =>
+        {
+            c.SwaggerDoc("v1", new()
+            {
+                Title = "Order Processing API",
+                Version = "v1",
+                Description = "Resilient Order Processing API with real-time logging via SignalR"
+            });
+        });
 
         // Configure options
         builder.Services.Configure<ResilienceOptions>(builder.Configuration.GetSection(ResilienceOptions.SectionName));
@@ -97,7 +109,62 @@ public static class WebApplicationBuilderExtensions
             .AddDbContextCheck<OrderContext>()
             .AddCheck<ResilienceHealthCheck>("resilience");
 
+        // Configure HttpClient with Polly resilience patterns for SignalR logging
+        builder.Services.AddHttpClient<ISignalRLoggingService, SignalRLoggingService>(client =>
+        {
+            client.Timeout = TimeSpan.FromSeconds(30);
+            client.DefaultRequestHeaders.Add("User-Agent", "OrderProcessing-API/1.0");
+        })
+        .AddPolicyHandler(GetRetryPolicy())
+        .AddPolicyHandler(GetCircuitBreakerPolicy());
+
+        // Register SignalR Logging Service
+        builder.Services.AddSingleton<ISignalRLoggingService, SignalRLoggingService>();
+
+        // Add CORS for development
+        builder.Services.AddCors(options =>
+        {
+            options.AddPolicy("AllowAll", policy =>
+            {
+                policy.AllowAnyOrigin()
+                      .AllowAnyMethod()
+                      .AllowAnyHeader();
+            });
+        });
+
         return builder;
+    }
+
+    // Polly policies
+    static IAsyncPolicy<HttpResponseMessage> GetRetryPolicy()
+    {
+        return HttpPolicyExtensions
+            .HandleTransientHttpError()
+            .OrResult(msg => !msg.IsSuccessStatusCode)
+            .WaitAndRetryAsync(
+                retryCount: 3,
+                sleepDurationProvider: retryAttempt => TimeSpan.FromSeconds(Math.Pow(2, retryAttempt)),
+                onRetry: (outcome, timespan, retryCount, context) =>
+                {
+                    Console.WriteLine($"[Polly] Retry {retryCount} after {timespan}s for SignalR logging");
+                });
+    }
+
+    static IAsyncPolicy<HttpResponseMessage> GetCircuitBreakerPolicy()
+    {
+        return HttpPolicyExtensions
+            .HandleTransientHttpError()
+            .CircuitBreakerAsync(
+                handledEventsAllowedBeforeBreaking: 3,
+                durationOfBreak: TimeSpan.FromSeconds(30),
+                onBreak: (result, timespan) =>
+                {
+                    Console.WriteLine($"[Polly] Circuit breaker opened for SignalR logging for {timespan}");
+                },
+                onReset: () =>
+                {
+                    Console.WriteLine("[Polly] Circuit breaker reset for SignalR logging");
+                });
     }
 
 }
