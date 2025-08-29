@@ -1,5 +1,6 @@
 ﻿using Microsoft.AspNetCore.Mvc;
 using OrderProcessing.Api.Dtos;
+using OrderProcessing.Core.Dtos;
 using OrderProcessing.Core.DTOs;
 using OrderProcessing.Core.Interfaces;
 using OrderProcessing.Services.Resilience;
@@ -21,7 +22,7 @@ public static class DemoEndpointsBuilder
             IOrderService orderService,
             ILogger<Program> logger) =>
         {
-            var results = new List<TestResult>();
+            var results = new List<CustomTestResult>();
 
             // Create multiple orders to test different scenarios
             for (int i = 0; i < request.NumberOfOrders; i++)
@@ -54,7 +55,7 @@ public static class DemoEndpointsBuilder
                     var processedOrder = await orderService.ProcessOrderAsync(order.Id);
                     var endTime = DateTime.UtcNow;
 
-                    results.Add(new TestResult
+                    results.Add(new CustomTestResult
                     {
                         OrderId = processedOrder.Id,
                         Status = processedOrder.Status.ToString(),
@@ -68,7 +69,7 @@ public static class DemoEndpointsBuilder
                 }
                 catch (Exception ex)
                 {
-                    results.Add(new TestResult
+                    results.Add(new CustomTestResult
                     {
                         OrderId = Guid.Empty,
                         Status = "Exception",

@@ -135,7 +135,7 @@ public class OrderService : IOrderService
 
         foreach (var item in order.Items)
         {
-            var isAvailable = await _inventoryService.CheckAvailabilityAsync(item.ProductId, item.Quantity);
+            var isAvailable = await _inventoryService.CheckAvailabilityAsync(item.ProductId, item.Quantity, order.Id);
             if (!isAvailable)
             {
                 throw new InvalidOperationException($"Insufficient inventory for product {item.ProductName}");

@@ -7,7 +7,7 @@ namespace OrderProcessing.Core.ExternalServices;
 
 public interface IInventoryService
 {
-    Task<bool> CheckAvailabilityAsync(string productId, int quantity);
+    Task<bool> CheckAvailabilityAsync(string productId, int quantity, Guid orderId);
     Task<bool> ReserveInventoryAsync(string productId, int quantity);
     Task<bool> ReleaseInventoryAsync(string productId, int quantity);
 }

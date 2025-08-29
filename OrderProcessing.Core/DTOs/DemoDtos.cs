@@ -1,17 +1,30 @@
-﻿namespace OrderProcessing.Api.Dtos;
+﻿namespace OrderProcessing.Core.Dtos;
 public class TestResilienceRequest
 {
     public int NumberOfOrders { get; set; } = 10;
     public int DelayBetweenRequestsMs { get; set; } = 100;
 }
 
-public class TestResult
+public class CustomTestResult
 {
     public Guid OrderId { get; set; }
     public string Status { get; set; } = string.Empty;
     public double ProcessingTimeMs { get; set; }
     public bool Success { get; set; }
     public string? FailureReason { get; set; }
+    
+    // Retry metrics
+    public int RetryCount { get; set; }
+    public double TotalRetryDelayMs { get; set; }
+    public List<RetryAttempt> RetryAttempts { get; set; } = new();
+}
+
+public class RetryAttempt
+{
+    public int AttemptNumber { get; set; }
+    public double DelayMs { get; set; }
+    public string? FailureReason { get; set; }
+    public DateTimeOffset Timestamp { get; set; }
 }
 
 public class TestSummary
@@ -20,7 +33,7 @@ public class TestSummary
     public int SuccessfulOrders { get; set; }
     public int FailedOrders { get; set; }
     public double AverageProcessingTimeMs { get; set; }
-    public List<TestResult> Results { get; set; } = new();
+    public List<CustomTestResult> Results { get; set; } = new();
     public double SuccessRate => TotalOrders > 0 ? (double)SuccessfulOrders / TotalOrders * 100 : 0;
 }
 

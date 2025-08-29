@@ -13,7 +13,7 @@ public class HttpInventoryService : IInventoryService
         _client = httpClientFactory.CreateClient("InventoryService");
     }
 
-    public async Task<bool> CheckAvailabilityAsync(string productId, int quantity)
+    public async Task<bool> CheckAvailabilityAsync(string productId, int quantity, Guid orderId)
     {
         var response = await _client.GetAsync($"/inventory/{productId}/availability?quantity={quantity}");
         if (response.StatusCode == System.Net.HttpStatusCode.ServiceUnavailable)

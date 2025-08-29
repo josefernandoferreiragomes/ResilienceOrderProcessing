@@ -1,4 +1,5 @@
 ﻿using Microsoft.Extensions.Logging;
+using OrderProcessing.Core.Dtos;
 using OrderProcessing.Core.ExternalServices;
 using OrderProcessing.Core.ExternalServices.Models;
 using OrderProcessing.Core.Interfaces;
@@ -6,6 +7,9 @@ using OrderProcessing.Core.Models;
 using Polly;
 using Polly.CircuitBreaker;
 using Polly.Retry;
+using Polly.Utilities;
+using System.Collections.Concurrent;
+using System.Diagnostics;
 
 namespace OrderProcessing.Services.Resilience;
 
@@ -25,20 +29,54 @@ public class ResilientInventoryService : IInventoryService
         _logger = logger;
     }
 
-    public async Task<bool> CheckAvailabilityAsync(string productId, int quantity)
+    public async Task<bool> CheckAvailabilityAsync(string productId, int quantity, Guid orderId)
     {
+        var customTestResult = new CustomTestResult
+        {
+            OrderId = orderId
+        };
+
+        var retryAttempts = new List<RetryAttempt>();
+        var totalRetryDelayMs = 0.0;
+        var retryCount = 0;
+        var stopwatch = Stopwatch.StartNew();
+
+        var context = ResilienceContextPool.Shared.Get();
+        context.Properties.Set(ResilienceContextKeys.RetryAttemptsKey, retryAttempts);
+
         try
         {
-            return await _pipeline.ExecuteAsync(async cancellationToken =>
+            bool available = await _pipeline.ExecuteAsync(async (cancellationToken) =>
             {
                 _logger.LogDebug("Executing availability check for product {ProductId}", productId);
-                return await _innerService.CheckAvailabilityAsync(productId, quantity);
-            });
+                return await _innerService.CheckAvailabilityAsync(productId, quantity, orderId);
+            }, context);
+
+            customTestResult.Success = available;
+            customTestResult.Status = available ? "Available" : "Unavailable";
+
+            return available;
         }
         catch (BrokenCircuitException)
         {
             _logger.LogWarning("Circuit breaker open for inventory service. Using fallback for product {ProductId}", productId);
             return await FallbackCheckAvailability(productId, quantity);
+        }
+        catch (Exception ex)
+        {
+            customTestResult.Success = false;
+            customTestResult.Status = "Failed";
+            customTestResult.FailureReason = ex.Message;
+            return false;
+        }
+        finally
+        {
+            stopwatch.Stop();
+            customTestResult.ProcessingTimeMs = stopwatch.Elapsed.TotalMilliseconds;
+            customTestResult.RetryAttempts = retryAttempts;
+            customTestResult.RetryCount = retryAttempts.Count;
+            customTestResult.TotalRetryDelayMs = retryAttempts.Sum(a => a.DelayMs);
+            ResilienceContextPool.Shared.Return(context);
         }
     }
 
@@ -252,4 +290,10 @@ public class ResilientShippingService : IShippingService
             return ShippingStatus.Processing; // Fallback status
         }
     }
+}
+
+public static class ResilienceContextKeys
+{
+    public static readonly ResiliencePropertyKey<List<RetryAttempt>> RetryAttemptsKey =
+        new ResiliencePropertyKey<List<RetryAttempt>>("RetryAttempts");
 }

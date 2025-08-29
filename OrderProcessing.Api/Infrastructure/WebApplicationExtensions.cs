@@ -64,7 +64,7 @@ public static class WebApplicationExtensions
                 TotalAmount = 299.97m,
                 Items = new List<OrderItem>
             {
-                new() { Id = Guid.NewGuid(), ProductId = "LAPTOP-001", ProductName = "Gaming Laptop", Quantity = 1, UnitPrice = 199.99m },
+                new() { Id = Guid.NewGuid(), ProductId = "LAPTOP-001", ProductName = "Gaming Laptop", Quantity = 5, UnitPrice = 199.99m },
                 new() { Id = Guid.NewGuid(), ProductId = "MOUSE-001", ProductName = "Gaming Mouse", Quantity = 2, UnitPrice = 49.99m }
             }
             };
