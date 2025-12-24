@@ -1,4 +1,5 @@
 ﻿using Microsoft.Extensions.Logging;
+using OrderProcessing.Core.Dtos;
 using OrderProcessing.Core.DTOs;
 using OrderProcessing.Core.ExternalServices;
 using OrderProcessing.Core.ExternalServices.Models;
@@ -78,8 +79,9 @@ public class OrderService : IOrderService
         return await _orderRepository.GetByCustomerIdAsync(customerId);
     }
 
-    public async Task<Order> ProcessOrderAsync(Guid orderId)
+    public async Task<CustomTestResult<Order>> ProcessOrderAsync(Guid orderId)
     {
+        var result = new CustomTestResult<Order>();
         var order = await _orderRepository.GetByIdAsync(orderId);
         if (order == null)
         {
@@ -90,14 +92,20 @@ public class OrderService : IOrderService
 
         try
         {
+            //TODO: Change to WaitAll when all steps are implemented, and include other steps' details in result
+
             // Step 1: Check Inventory
-            await CheckInventoryAsync(order);
+            var checkInventoryResult = CheckInventoryAsync(order);
+            //map checkInventoryResult to result
+            result = checkInventoryResult.Result.CloneWithoutObject<Order>(checkInventoryResult.Result);
 
-            // Step 2: Process Payment
-            await ProcessPaymentAsync(order);
-
+             // Step 2: Process Payment
+            var processPaymentAsync = ProcessPaymentAsync(order);
+           
             // Step 3: Arrange Shipping
-            await ArrangeShippingAsync(order);
+            var arrancheShippingAsync = ArrangeShippingAsync(order);
+
+            Task.WhenAll(checkInventoryResult, processPaymentAsync, arrancheShippingAsync).Wait();
 
             order.Status = OrderStatus.Shipped;
             _logger.LogInformation("Order {OrderId} processing completed successfully", orderId);
@@ -109,7 +117,9 @@ public class OrderService : IOrderService
             order.FailureReason = ex.Message;
         }
 
-        return await _orderRepository.UpdateAsync(order);
+        var updateResult = await _orderRepository.UpdateAsync(order);
+        result.ObjectReference = updateResult;
+        return result;
     }
 
     public async Task<Order> UpdateOrderStatusAsync(Guid orderId, OrderStatus status, string? failureReason = null)
@@ -129,18 +139,21 @@ public class OrderService : IOrderService
         return await _orderRepository.UpdateAsync(order);
     }
 
-    private async Task CheckInventoryAsync(Order order)
+    private async Task<CustomTestResult<AvailabilityResponse>> CheckInventoryAsync(Order order)
     {
+        var result = new CustomTestResult<AvailabilityResponse>();
+        
         _logger.LogInformation("Checking inventory for order {OrderId}", order.Id);
 
         foreach (var item in order.Items)
         {
-            var isAvailable = await _inventoryService.CheckAvailabilityAsync(item.ProductId, item.Quantity, order.Id);
-            if (!isAvailable)
+            result = await _inventoryService.CheckAvailabilityAsync(item.ProductId, item.Quantity, order.Id);
+            if (!result.Success)
             {
                 throw new InvalidOperationException($"Insufficient inventory for product {item.ProductName}");
             }
 
+            //TODO: adapt result to include reservation result details
             var reserved = await _inventoryService.ReserveInventoryAsync(item.ProductId, item.Quantity);
             if (!reserved)
             {
@@ -151,10 +164,13 @@ public class OrderService : IOrderService
         order.Status = OrderStatus.InventoryChecked;
         await _orderRepository.UpdateAsync(order);
         _logger.LogInformation("Inventory check completed for order {OrderId}", order.Id);
+
+        return result;
     }
 
-    private async Task ProcessPaymentAsync(Order order)
+    private async Task<CustomTestResult<Order>> ProcessPaymentAsync(Order order)
     {
+        var result = new CustomTestResult<Order>();
         _logger.LogInformation("Processing payment for order {OrderId}", order.Id);
 
         order.Status = OrderStatus.PaymentProcessing;
@@ -196,11 +212,14 @@ public class OrderService : IOrderService
             throw new InvalidOperationException($"Payment failed: {paymentResult.FailureReason}");
         }
 
-        await _orderRepository.UpdateAsync(order);
+        result.ObjectReference = await _orderRepository.UpdateAsync(order);
+        return result;
     }
 
-    private async Task ArrangeShippingAsync(Order order)
+    private async Task<CustomTestResult<Order>> ArrangeShippingAsync(Order order)
     {
+        var result = new CustomTestResult<Order>();
+
         _logger.LogInformation("Arranging shipping for order {OrderId}", order.Id);
 
         order.Status = OrderStatus.Shipping;
@@ -244,7 +263,8 @@ public class OrderService : IOrderService
             throw new InvalidOperationException($"Shipping failed: {shippingResult.FailureReason}");
         }
 
-        await _orderRepository.UpdateAsync(order);
+        result.ObjectReference = await _orderRepository.UpdateAsync(order);
+        return result;
     }
 
     public Task<IEnumerable<Order>> GetOrdersNextPageAsync(int page, int pageCount)

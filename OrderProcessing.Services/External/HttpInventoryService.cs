@@ -1,4 +1,7 @@
+using OrderProcessing.Core.Dtos;
+using OrderProcessing.Core.DTOs;
 using OrderProcessing.Core.ExternalServices;
+using System.Net.Http;
 using System.Net.Http.Json;
 using System.Threading.Tasks;
 
@@ -8,20 +11,27 @@ public class HttpInventoryService : IInventoryService
 {
     private readonly HttpClient _client;
 
-    public HttpInventoryService(IHttpClientFactory httpClientFactory)
+    //public HttpInventoryService(IHttpClientFactory httpClientFactory)
+    //{
+    //    _client = httpClientFactory.CreateClient("InventoryService");
+    //}
+    public HttpInventoryService(HttpClient httpClient)
     {
-        _client = httpClientFactory.CreateClient("InventoryService");
+        _client = httpClient;
     }
 
-    public async Task<bool> CheckAvailabilityAsync(string productId, int quantity, Guid orderId)
+    public async Task<CustomTestResult<AvailabilityResponse>> CheckAvailabilityAsync(string productId, int quantity, Guid orderId)
     {
-        var response = await _client.GetAsync($"/inventory/{productId}/availability?quantity={quantity}");
-        if (response.StatusCode == System.Net.HttpStatusCode.ServiceUnavailable)
+        CustomTestResult<AvailabilityResponse> result = new CustomTestResult<AvailabilityResponse>();
+
+        var serviceResponse = await _client.GetAsync($"/inventory/{productId}/availability?quantity={quantity}");
+        if (serviceResponse.StatusCode == System.Net.HttpStatusCode.ServiceUnavailable)
             throw new InvalidOperationException("Inventory service temporarily unavailable");
 
-        response.EnsureSuccessStatusCode();
-        var result = await response.Content.ReadFromJsonAsync<AvailabilityResponse>();
-        return result?.isAvailable ?? false;
+        serviceResponse.EnsureSuccessStatusCode();
+        var resultFromJson = await serviceResponse.Content.ReadFromJsonAsync<AvailabilityResponse>();
+        result.ObjectReference = resultFromJson ?? new AvailabilityResponse();
+        return result;
     }
 
     public async Task<bool> ReserveInventoryAsync(string productId, int quantity)
@@ -39,5 +49,8 @@ public class HttpInventoryService : IInventoryService
         return response.IsSuccessStatusCode;
     }
 
-    private record AvailabilityResponse(bool isAvailable);
+    //public Task<CustomTestResult<AvailabilityResponse>> CheckAvailabilityAsync(string productId, int quantity, Guid orderId)
+    //{
+    //    throw new NotImplementedException();
+    //}
 }

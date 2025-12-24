@@ -5,8 +5,10 @@ public class TestResilienceRequest
     public int DelayBetweenRequestsMs { get; set; } = 100;
 }
 
-public class CustomTestResult
+public class CustomTestResult<T>
 {
+    public T? ObjectReference { get; set; }
+    
     public Guid OrderId { get; set; }
     public string Status { get; set; } = string.Empty;
     public double ProcessingTimeMs { get; set; }
@@ -17,6 +19,21 @@ public class CustomTestResult
     public int RetryCount { get; set; }
     public double TotalRetryDelayMs { get; set; }
     public List<RetryAttempt> RetryAttempts { get; set; } = new();
+    
+    public CustomTestResult<V> CloneWithoutObject<V>(CustomTestResult<T> objectToBeCloned)
+    {
+        return new CustomTestResult<V>
+        {
+            OrderId = objectToBeCloned.OrderId,
+            Status = objectToBeCloned.Status,
+            ProcessingTimeMs = objectToBeCloned.ProcessingTimeMs,
+            Success = objectToBeCloned.Success,
+            FailureReason = objectToBeCloned.FailureReason,
+            RetryCount = objectToBeCloned.RetryCount,
+            TotalRetryDelayMs = objectToBeCloned.TotalRetryDelayMs,
+            RetryAttempts = objectToBeCloned.RetryAttempts
+        };
+    }
 }
 
 public class RetryAttempt
@@ -27,13 +44,13 @@ public class RetryAttempt
     public DateTimeOffset Timestamp { get; set; }
 }
 
-public class TestSummary
+public class TestSummary<T>
 {
     public int TotalOrders { get; set; }
     public int SuccessfulOrders { get; set; }
     public int FailedOrders { get; set; }
     public double AverageProcessingTimeMs { get; set; }
-    public List<CustomTestResult> Results { get; set; } = new();
+    public List<CustomTestResult<T>> Results { get; set; } = new();
     public double SuccessRate => TotalOrders > 0 ? (double)SuccessfulOrders / TotalOrders * 100 : 0;
 }
 

@@ -29,8 +29,8 @@ public class MockInventoryService
         // Simulate network delay
         await Task.Delay(_random.Next(100, 500));
 
-        // Simulate occasional failures (30% chance)
-        if (_random.Next(1, 101) <= 30)
+        // Simulate occasional failures (90% chance)
+        if (_random.Next(1, 101) <= 90)
         {
             _logger.LogWarning("Inventory service temporarily unavailable for product {ProductId}", productId);
             throw new InvalidOperationException("Inventory service temporarily unavailable");

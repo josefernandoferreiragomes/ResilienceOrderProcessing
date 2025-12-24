@@ -1,5 +1,6 @@
 ﻿using Microsoft.Extensions.Logging;
 using Microsoft.Extensions.Options;
+using OrderProcessing.Core.Dtos;
 using OrderProcessing.Services.Configuration;
 using Polly;
 using Polly.CircuitBreaker;
@@ -79,6 +80,18 @@ public class ResiliencePipelineFactory : IResiliencePipelineFactory
                     _options.RetryPolicy.MaxRetries,
                     args.RetryDelay.TotalMilliseconds,
                     args.Outcome.Exception?.Message ?? "Unknown");
+
+                // Add retry attempt to the context if available
+                if (args.Context.Properties.TryGetValue(ResilienceContextKeys.RetryAttemptsKey, out var retryAttempts))
+                {
+                    retryAttempts.Add(new RetryAttempt
+                    {
+                        AttemptNumber = args.AttemptNumber,
+                        DelayMs = args.RetryDelay.TotalMilliseconds,
+                        FailureReason = args.Outcome.Exception?.Message,
+                        Timestamp = DateTimeOffset.UtcNow
+                    });
+                }
 
                 return ValueTask.CompletedTask;
             }
