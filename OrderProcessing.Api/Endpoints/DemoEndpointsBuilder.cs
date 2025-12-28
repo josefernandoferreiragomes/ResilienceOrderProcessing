@@ -1,4 +1,5 @@
 ﻿using Microsoft.AspNetCore.Mvc;
+using OpenTelemetry.Trace;
 using OrderProcessing.Api.Dtos;
 using OrderProcessing.Core.Dtos;
 using OrderProcessing.Core.DTOs;
@@ -22,7 +23,7 @@ public static class DemoEndpointsBuilder
             IOrderService orderService,
             ILogger<Program> logger) =>
         {
-            var results = new List<CustomTestResult>();
+            var results = new List<CustomTestResult<AvailabilityResponse>>();
 
             // Create multiple orders to test different scenarios
             for (int i = 0; i < request.NumberOfOrders; i++)
@@ -55,12 +56,12 @@ public static class DemoEndpointsBuilder
                     var processedOrder = await orderService.ProcessOrderAsync(order.Id);
                     var endTime = DateTime.UtcNow;
 
-                    results.Add(new CustomTestResult
+                    results.Add(new CustomTestResult<AvailabilityResponse>
                     {
-                        OrderId = processedOrder.Id,
+                        OrderId = processedOrder.ObjectReference?.Id ?? new Guid(),
                         Status = processedOrder.Status.ToString(),
                         ProcessingTimeMs = (endTime - startTime).TotalMilliseconds,
-                        Success = processedOrder.Status != Core.Models.OrderStatus.Failed,
+                        Success = processedOrder.ObjectReference?.Status != Core.Models.OrderStatus.Failed,
                         FailureReason = processedOrder.FailureReason
                     });
 
@@ -69,7 +70,7 @@ public static class DemoEndpointsBuilder
                 }
                 catch (Exception ex)
                 {
-                    results.Add(new CustomTestResult
+                    results.Add(new CustomTestResult<AvailabilityResponse>
                     {
                         OrderId = Guid.Empty,
                         Status = "Exception",
@@ -89,7 +90,7 @@ public static class DemoEndpointsBuilder
                 }
             }
 
-            var summary = new TestSummary
+            var summary = new TestSummary<AvailabilityResponse>
             {
                 TotalOrders = request.NumberOfOrders,
                 SuccessfulOrders = results.Count(r => r.Success),
@@ -102,7 +103,7 @@ public static class DemoEndpointsBuilder
         })
         .WithName("TestResilience")
         .WithSummary("Create multiple test orders to demonstrate resilience patterns")
-        .Produces<TestSummary>(200);
+        .Produces<TestSummary<AvailabilityResponse>>(200);
 
         // Simulate high load to trigger circuit breakers
         demo.MapPost("/simulate-load", async (
@@ -193,11 +194,12 @@ public static class DemoEndpointsBuilder
             return new LoadTestResult
             {
                 RequestId = requestId,
-                OrderId = processedOrder.Id,
-                Success = processedOrder.Status != Core.Models.OrderStatus.Failed,
+                OrderId = processedOrder.ObjectReference?.Id ?? new Guid(),
+                Success = processedOrder.ObjectReference?.Status != Core.Models.OrderStatus.Failed,
                 ResponseTimeMs = (endTime - startTime).TotalMilliseconds,
                 Status = processedOrder.Status.ToString(),
                 ErrorMessage = processedOrder.FailureReason
+                
             };
         }
         catch (Exception ex)

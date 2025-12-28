@@ -1,13 +1,13 @@
-﻿using OrderProcessing.Core.Interfaces;
-using OrderProcessing.Core.Models;
+﻿using OrderProcessing.Core.Dtos;
 using OrderProcessing.Core.DTOs;
 using OrderProcessing.Core.ExternalServices.Models;
-
+using OrderProcessing.Core.Models;
 namespace OrderProcessing.Core.ExternalServices;
 
 public interface IInventoryService
 {
-    Task<bool> CheckAvailabilityAsync(string productId, int quantity, Guid orderId);
+    Task<CustomTestResult<AvailabilityResponse>> CheckAvailabilityAsync(string productId, int quantity, Guid orderId);
+    //Task<CustomTestResult<AvailabilityResponse>> CheckAvailabilityAsyncInner(string productId, int quantity, Guid orderId);
     Task<bool> ReserveInventoryAsync(string productId, int quantity);
     Task<bool> ReleaseInventoryAsync(string productId, int quantity);
 }

@@ -7,7 +7,7 @@ namespace OrderProcessing.Api.Infrastructure;
 
 public static class WebApplicationExtensions
 {
-    public static void ConfigureAppPipeline(this WebApplication app)
+    public static Task ConfigureAppPipeline(this WebApplication app)
     {
 
         // Map demo endpoints
@@ -44,7 +44,7 @@ public static class WebApplicationExtensions
         using (var scope = app.Services.CreateScope())
         {
             var context = scope.ServiceProvider.GetRequiredService<OrderContext>();
-            SeedData(context);
+            return Task.FromResult(SeedData(context));
         }
 
 

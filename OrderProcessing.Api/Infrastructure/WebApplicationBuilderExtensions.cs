@@ -72,6 +72,12 @@ public static class WebApplicationBuilderExtensions
         // Add resilient decorators for external services
         //missing adaptation to HttpInventoryService instead of MockInventoryService
         //builder.Services.AddScoped<IInventoryService, HttpInventoryService>();
+        
+        // Add HTTP clients for external services (will be used later with Polly)
+        builder.Services.AddHttpClient<HttpInventoryService>(client =>
+        {
+            client.BaseAddress = new Uri("https://localhost:7261");
+        });
 
         builder.Services.AddScoped<IInventoryService>(provider =>
         {
@@ -97,12 +103,16 @@ public static class WebApplicationBuilderExtensions
             return new ResilientShippingService(mockService, pipelineFactory, logger);
         });
 
-        // Add HTTP clients for external services (will be used later with Polly)
-        builder.Services.AddHttpClient();
-        builder.Services.AddHttpClient("InventoryService", client =>
-        {
-            client.BaseAddress = new Uri("https://localhost:7261"); // Update port as needed
-        });
+        
+        //builder.Services.AddHttpClient();
+
+        // Remove or comment out for InventoryService
+        // builder.Services.AddHttpClient("InventoryService", client =>
+        // {
+        //     client.BaseAddress = new Uri("https://localhost:7261");
+        // })
+        //     .AddPolicyHandler(GetRetryPolicy())
+        //     .AddPolicyHandler(GetCircuitBreakerPolicy());
 
         // Add health checks
         builder.Services.AddHealthChecks()

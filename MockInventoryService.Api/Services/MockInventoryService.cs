@@ -1,8 +1,11 @@
 ﻿using Microsoft.Extensions.Logging;
+using OrderProcessing.Core.Dtos;
+using OrderProcessing.Core.DTOs;
+using OrderProcessing.Core.ExternalServices;
 
 namespace MockInventory.Api.Services;
 
-public class MockInventoryService
+public class MockInventoryService : IInventoryService
 {
     private readonly ILogger<MockInventoryService> _logger;
     private readonly Random _random = new();
@@ -29,8 +32,8 @@ public class MockInventoryService
         // Simulate network delay
         await Task.Delay(_random.Next(100, 500));
 
-        // Simulate occasional failures (30% chance)
-        if (_random.Next(1, 101) <= 30)
+        // Simulate occasional failures (90% chance)
+        if (_random.Next(1, 101) <= 90)
         {
             _logger.LogWarning("Inventory service temporarily unavailable for product {ProductId}", productId);
             throw new InvalidOperationException("Inventory service temporarily unavailable");
@@ -85,5 +88,10 @@ public class MockInventoryService
 
         _logger.LogInformation("Successfully released {Quantity} units of product {ProductId}", quantity, productId);
         return true;
+    }
+
+    public Task<CustomTestResult<AvailabilityResponse>> CheckAvailabilityAsync(string productId, int quantity, Guid orderId)
+    {
+        throw new NotImplementedException();
     }
 }

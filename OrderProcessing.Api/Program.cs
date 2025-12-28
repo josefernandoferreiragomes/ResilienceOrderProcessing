@@ -5,5 +5,7 @@ var builder = WebApplication.CreateBuilder(args);
 builder.ConfigureAppServices();
 var app = builder.Build();
 
-app.ConfigureAppPipeline();
+await app.ConfigureAppPipeline();
 await app.RunAsync();
+
+public partial class Program { }

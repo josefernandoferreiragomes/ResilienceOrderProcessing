@@ -258,7 +258,7 @@ public static class OrderEndpointsBuilder
 
                 var order = await orderService.ProcessOrderAsync(id);
                 var orderMapper = endpoints.ServiceProvider.GetRequiredService<OrderMapper>();
-                var response = orderMapper.MapToResponse(order);
+                var response = orderMapper.MapToResponse(order?.ObjectReference ?? new Order());
 
                 return Results.Ok(response);
             }

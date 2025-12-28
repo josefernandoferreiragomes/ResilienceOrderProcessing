@@ -1,14 +1,12 @@
 ﻿using Microsoft.Extensions.Logging;
 using OrderProcessing.Core.Dtos;
+using OrderProcessing.Core.DTOs;
 using OrderProcessing.Core.ExternalServices;
 using OrderProcessing.Core.ExternalServices.Models;
-using OrderProcessing.Core.Interfaces;
 using OrderProcessing.Core.Models;
 using Polly;
 using Polly.CircuitBreaker;
 using Polly.Retry;
-using Polly.Utilities;
-using System.Collections.Concurrent;
 using System.Diagnostics;
 
 namespace OrderProcessing.Services.Resilience;
@@ -27,18 +25,15 @@ public class ResilientInventoryService : IInventoryService
         _innerService = innerService;
         _pipeline = pipelineFactory.CreateInventoryPipeline();
         _logger = logger;
+        _logger.LogInformation("ResilientInventoryService created, wrapping {InnerType}", innerService.GetType().Name);
     }
 
-    public async Task<bool> CheckAvailabilityAsync(string productId, int quantity, Guid orderId)
+    public async Task<CustomTestResult<AvailabilityResponse>> CheckAvailabilityAsync(string productId, int quantity, Guid orderId)
     {
-        var customTestResult = new CustomTestResult
-        {
-            OrderId = orderId
-        };
+        _logger.LogInformation("CheckAvailabilityAsync started for ProductId={ProductId}, Quantity={Quantity}, OrderId={OrderId}", productId, quantity, orderId);
 
+        var result = new CustomTestResult<AvailabilityResponse> { OrderId = orderId };
         var retryAttempts = new List<RetryAttempt>();
-        var totalRetryDelayMs = 0.0;
-        var retryCount = 0;
         var stopwatch = Stopwatch.StartNew();
 
         var context = ResilienceContextPool.Shared.Get();
@@ -46,86 +41,111 @@ public class ResilientInventoryService : IInventoryService
 
         try
         {
-            bool available = await _pipeline.ExecuteAsync(async (cancellationToken) =>
+            var innerTestResult = await _pipeline.ExecuteAsync(async (cancellationToken) =>
             {
-                _logger.LogDebug("Executing availability check for product {ProductId}", productId);
+                _logger.LogDebug("Calling inner CheckAvailabilityAsync for ProductId={ProductId}", productId);
                 return await _innerService.CheckAvailabilityAsync(productId, quantity, orderId);
             }, context);
 
-            customTestResult.Success = available;
-            customTestResult.Status = available ? "Available" : "Unavailable";
+            result.Success = innerTestResult.Success;
+            result.Status = innerTestResult.Success ? "Available" : "Unavailable";
+            _logger.LogInformation("CheckAvailabilityAsync completed for ProductId={ProductId} with Status={Status}", productId, result.Status);
 
-            return available;
+            return result;
         }
         catch (BrokenCircuitException)
         {
-            _logger.LogWarning("Circuit breaker open for inventory service. Using fallback for product {ProductId}", productId);
+            _logger.LogWarning("Circuit breaker open for inventory service. Using fallback for ProductId={ProductId}", productId);
             return await FallbackCheckAvailability(productId, quantity);
         }
         catch (Exception ex)
         {
-            customTestResult.Success = false;
-            customTestResult.Status = "Failed";
-            customTestResult.FailureReason = ex.Message;
-            return false;
+            _logger.LogError(ex, "Error in CheckAvailabilityAsync for ProductId={ProductId}: {Message}", productId, ex.Message);
+            result.Success = false;
+            result.Status = "Failed";
+            result.FailureReason = ex.Message;
+            return result;
         }
         finally
         {
             stopwatch.Stop();
-            customTestResult.ProcessingTimeMs = stopwatch.Elapsed.TotalMilliseconds;
-            customTestResult.RetryAttempts = retryAttempts;
-            customTestResult.RetryCount = retryAttempts.Count;
-            customTestResult.TotalRetryDelayMs = retryAttempts.Sum(a => a.DelayMs);
+            result.ProcessingTimeMs = stopwatch.Elapsed.TotalMilliseconds;
+            result.RetryAttempts = retryAttempts;
+            result.RetryCount = retryAttempts.Count;
+            result.TotalRetryDelayMs = retryAttempts.Sum(a => a.DelayMs);
             ResilienceContextPool.Shared.Return(context);
+
+            _logger.LogInformation("CheckAvailabilityAsync finished for ProductId={ProductId}. ProcessingTimeMs={ProcessingTimeMs}, RetryCount={RetryCount}", productId, result.ProcessingTimeMs, result.RetryCount);
         }
     }
 
     public async Task<bool> ReserveInventoryAsync(string productId, int quantity)
     {
+        _logger.LogInformation("ReserveInventoryAsync started for ProductId={ProductId}, Quantity={Quantity}", productId, quantity);
         try
         {
             return await _pipeline.ExecuteAsync(async cancellationToken =>
             {
-                _logger.LogDebug("Executing inventory reservation for product {ProductId}", productId);
+                _logger.LogDebug("Calling inner ReserveInventoryAsync for ProductId={ProductId}", productId);
                 return await _innerService.ReserveInventoryAsync(productId, quantity);
             });
         }
         catch (BrokenCircuitException)
         {
-            _logger.LogWarning("Circuit breaker open for inventory service. Cannot reserve inventory for product {ProductId}", productId);
+            _logger.LogWarning("Circuit breaker open for inventory service. Cannot reserve inventory for ProductId={ProductId}", productId);
             throw new InvalidOperationException("Inventory service is currently unavailable");
+        }
+        catch (Exception ex)
+        {
+            _logger.LogError(ex, "Error in ReserveInventoryAsync for ProductId={ProductId}: {Message}", productId, ex.Message);
+            throw;
         }
     }
 
     public async Task<bool> ReleaseInventoryAsync(string productId, int quantity)
     {
+        _logger.LogInformation("ReleaseInventoryAsync started for ProductId={ProductId}, Quantity={Quantity}", productId, quantity);
         try
         {
             return await _pipeline.ExecuteAsync(async cancellationToken =>
             {
+                _logger.LogDebug("Calling inner ReleaseInventoryAsync for ProductId={ProductId}", productId);
                 return await _innerService.ReleaseInventoryAsync(productId, quantity);
             });
         }
         catch (BrokenCircuitException)
         {
-            _logger.LogWarning("Circuit breaker open for inventory service. Cannot release inventory for product {ProductId}", productId);
-            // For release operations, we might want to queue this for later processing
+            _logger.LogWarning("Circuit breaker open for inventory service. Cannot release inventory for ProductId={ProductId}", productId);
             return false;
+        }
+        catch (Exception ex)
+        {
+            _logger.LogError(ex, "Error in ReleaseInventoryAsync for ProductId={ProductId}: {Message}", productId, ex.Message);
+            throw;
         }
     }
 
-    private Task<bool> FallbackCheckAvailability(string productId, int quantity)
+    private Task<CustomTestResult<AvailabilityResponse>> FallbackCheckAvailability(string productId, int quantity)
     {
+        var customTestResult = new CustomTestResult<AvailabilityResponse>();
+        customTestResult.ObjectReference = new AvailabilityResponse();
+
         // Simple fallback logic - assume common products are available
         var commonProducts = new[] { "LAPTOP-001", "MOUSE-001", "KEYBOARD-001" };
         var isCommonProduct = commonProducts.Contains(productId);
         var isReasonableQuantity = quantity <= 5;
 
-        var result = isCommonProduct && isReasonableQuantity;
-        _logger.LogInformation("Fallback availability check for {ProductId}: {Available}", productId, result);
+        customTestResult.ObjectReference.IsAvailable = isCommonProduct && isReasonableQuantity;
+         
+        _logger.LogInformation("Fallback availability check for {ProductId}: {Available}", productId, customTestResult.Success);
 
-        return Task.FromResult(result);
+        return Task.FromResult(customTestResult);
     }
+
+    //public Task<CustomTestResult<AvailabilityResponse>> CheckAvailabilityAsyncInner(string productId, int quantity, Guid orderId)
+    //{
+    //    throw new NotImplementedException();
+    //}
 }
 
 public class ResilientPaymentService : IPaymentService
