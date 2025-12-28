@@ -4,7 +4,7 @@
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <title>Order Processing - Real-time Logging Dashboard</title>
-    <script src="https://cdn.jsdelivr.net/npm/@microsoft/signalr@8.0.0/dist/signalr.js"></script>
+    <script src="https://cdn.jsdelivr.net/npm/@microsoft/signalr@8.0.0/dist/signalr.js" async></script>
     <style>
         * {
             margin: 0;
@@ -618,8 +618,24 @@
 
         // Connect to SignalR hub
         async function connectSignalR() {
+            // Check if already connected
             if (connection && connection.state === 1) {
                 console.log('Already connected');
+                return;
+            }
+
+            // Wait for SignalR to be available with timeout
+            let retries = 0;
+            const maxRetries = 100; // 10 seconds (100 * 100ms)
+            
+            while (typeof signalR === 'undefined' && retries < maxRetries) {
+                await new Promise(resolve => setTimeout(resolve, 100));
+                retries++;
+            }
+
+            if (typeof signalR === 'undefined') {
+                console.error('SignalR library failed to load after 10 seconds');
+                updateConnectionStatus(false, 'Error: SignalR library failed to load');
                 return;
             }
 
