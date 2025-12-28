@@ -109,7 +109,7 @@ public class OrdersController : ControllerBase
             _logger.LogInformation("Processing order {OrderId}", id);
 
             var order = await _orderService.ProcessOrderAsync(id);
-            var response = MapToResponse(order);
+            var response = MapToResponse(order?.ObjectReference ?? new Order());
 
             return Ok(response);
         }

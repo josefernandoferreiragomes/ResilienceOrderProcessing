@@ -1,6 +1,7 @@
 // OrderProcessing.Api/Program.cs
 using Microsoft.AspNetCore.Mvc;
 using Microsoft.EntityFrameworkCore;
+using MockInventory.Api.Services;
 using OrderProcessing.Core.ExternalServices;
 using OrderProcessing.Core.Interfaces;
 using OrderProcessing.Infrastructure.Data;

@@ -1,7 +1,7 @@
 <Project Sdk="Microsoft.NET.Sdk.Web">
 
   <PropertyGroup>
-    <TargetFramework>net8.0</TargetFramework>
+    <TargetFramework>net9.0</TargetFramework>
     <Nullable>enable</Nullable>
     <ImplicitUsings>enable</ImplicitUsings>
     <UserSecretsId>77ff181d-1482-47ca-9f69-f2140de4c9e7</UserSecretsId>
@@ -11,16 +11,17 @@
   <ItemGroup>
 	  <PackageReference Include="Microsoft.AspNetCore.OpenApi" Version="8.0.0" />
 	  <PackageReference Include="Microsoft.EntityFrameworkCore.InMemory" Version="8.0.0" />
+	  <PackageReference Include="Microsoft.Extensions.Http.Resilience" Version="10.1.0" />
+	  <PackageReference Include="Microsoft.Extensions.Resilience" Version="10.1.0" />
 	  <PackageReference Include="Serilog.AspNetCore" Version="8.0.0" />
 	  <PackageReference Include="Serilog.Sinks.File" Version="5.0.0" />
 	  <PackageReference Include="Swashbuckle.AspNetCore" Version="6.5.0" />
-	  <PackageReference Include="Polly" Version="8.0.0" />
-	  <PackageReference Include="Microsoft.Extensions.Http.Polly" Version="8.0.0" />
 	  <PackageReference Include="Microsoft.AspNetCore.Diagnostics.HealthChecks" Version="2.2.0" />
 	  <PackageReference Include="Microsoft.Extensions.Diagnostics.HealthChecks.EntityFrameworkCore" Version="8.0.0" />
   </ItemGroup>
 
   <ItemGroup>
+    <ProjectReference Include="..\MockInventoryService.Api\MockInventoryService.Api.csproj" />
     <ProjectReference Include="..\OrderProcessing.Core\OrderProcessing.Core.csproj" />
     <ProjectReference Include="..\OrderProcessing.Infrastructure\OrderProcessing.Infrastructure.csproj" />
     <ProjectReference Include="..\OrderProcessing.Services\OrderProcessing.Services.csproj" />

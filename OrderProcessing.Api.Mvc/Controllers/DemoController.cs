@@ -54,10 +54,10 @@ public static class DemoEndpoints
 
                     results.Add(new TestResult
                     {
-                        OrderId = processedOrder.Id,
+                        OrderId = processedOrder.OrderId,
                         Status = processedOrder.Status.ToString(),
                         ProcessingTimeMs = (endTime - startTime).TotalMilliseconds,
-                        Success = processedOrder.Status != Core.Models.OrderStatus.Failed,
+                        Success = processedOrder.Status != Core.Models.OrderStatus.Failed.ToString(),
                         FailureReason = processedOrder.FailureReason
                     });
 
@@ -181,7 +181,7 @@ public static class DemoEndpoints
             return new LoadTestResult
             {
                 RequestId = requestId,
-                Success = processedOrder.Status != Core.Models.OrderStatus.Failed,
+                Success = processedOrder.Status != Core.Models.OrderStatus.Failed.ToString(),
                 ResponseTimeMs = (endTime - startTime).TotalMilliseconds,
                 Status = processedOrder.Status.ToString(),
                 ErrorMessage = processedOrder.FailureReason
